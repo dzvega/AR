@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heritage Preservation Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            color: #1a202c;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1024px;
+            margin: auto;
+            padding: 2rem;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .quiz-option {
+            background-color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .quiz-option:hover {
+            background-color: #cbd5e1;
+        }
+        .quiz-option.correct {
+            background-color: #48bb78;
+            color: white;
+        }
+        .quiz-option.incorrect {
+            background-color: #f56565;
+            color: white;
+        }
+        #ar-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #ar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            flex-direction: column;
+            padding: 1rem;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.5s linear;
+        }
+        #ar-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+        .ar-instructions {
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            max-width: 400px;
+            margin-top: 1rem;
+        }
+        .go-back-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 101;
+            background-color: #dc2626;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        .go-back-button:hover {
+            background-color: #b91c1c;
+        }
+    </style>
+</head>
+<body class="p-8">
+
+<div id="app" class="container mx-auto">
+    <!-- Header -->
+    <header class="text-center mb-8">
+        <h1 class="text-5xl font-bold mb-2 text-indigo-600">Heritage Preservation</h1>
+        <p class="text-xl text-gray-600">Explore the history and culture of monuments.</p>
+    </header>
+
+    <!-- Controls: Monument, Language, & TTS -->
+    <div class="flex flex-col sm:flex-row items-center justify-center mb-8 gap-4">
+        <div class="flex items-center gap-2">
+            <label for="monument-select" class="text-gray-700">Select Monument:</label>
+            <select id="monument-select" class="rounded-lg p-2 border-gray-300">
+                <option value="qutubMinar">Qutub Minar (Delhi)</option>
+                <option value="konarkTemple">Konark Sun Temple (Odisha)</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <label for="language-select" class="text-gray-700">Select Language:</label>
+            <select id="language-select" class="rounded-lg p-2 border-gray-300">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="or">Odia</option>
+            </select>
+        </div>
+        <button id="tts-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+            <svg class="w-5 h-5 inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zM5 8a1 1 0 011 1v7a1 1 0 11-2 0V9a1 1 0 011-1zM15 8a1 1 0 011 1v7a1 1 0 11-2 0V9a1 1 0 011-1z"/></svg>
+            <span id="tts-label">Play Audio</span>
+        </button>
+        <button id="ar-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+            View in AR
+        </button>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div id="main-content" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Information Card -->
+        <div class="lg:col-span-2 card">
+            <h2 id="monument-title" class="text-3xl font-bold mb-4 text-gray-800"></h2>
+            <div class="mb-4 rounded-lg overflow-hidden shadow-lg">
+                <img id="monument-image" src="" alt="Monument Image" class="w-full h-auto object-cover">
+            </div>
+            <div id="monument-history" class="text-gray-700 leading-relaxed text-lg"></div>
+        </div>
+
+        <!-- Right Sidebar Grid -->
+        <div class="lg:col-span-1 grid grid-cols-1 gap-8">
+            <!-- Fun Facts Card -->
+            <div class="card bg-yellow-50 border-l-4 border-yellow-500">
+                <h3 class="text-xl font-bold mb-2 text-yellow-800">Did you know?</h3>
+                <ul id="fun-facts" class="list-disc list-inside text-yellow-700"></ul>
+            </div>
+
+            <!-- Dynamic Quiz Card -->
+            <div class="card bg-green-50 border-l-4 border-green-500">
+                <h3 class="text-xl font-bold mb-4 text-green-800">Test Your Knowledge!</h3>
+                <div id="quiz-question" class="mb-4 text-lg font-medium text-green-900"></div>
+                <div id="quiz-options" class="flex flex-col"></div>
+                <div id="quiz-result" class="mt-4 font-bold"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AR Section -->
+<div id="ar-container" class="hidden absolute top-0 left-0 w-full h-full z-50">
+    <!-- A-Frame Scene with AR and Raycaster Components -->
+    <a-scene embedded
+             arjs='sourceType: webcam; trackingMethod: best; debugUIEnabled: false;'
+             renderer="logarithmicDepthBuffer: true;">
+
+        <!--
+            The a-entity with the camera component is used instead of the a-camera-static component,
+            which can cause conflicts with AR.js. This ensures AR.js correctly manages the camera.
+        -->
+        <a-entity camera></a-entity>
+
+        <!-- The a-entity with cursor and raycaster is placed here to handle click events on the screen -->
+        <a-entity cursor="rayOrigin: mouse" raycaster="objects: a-scene; far: 1000"></a-entity>
+
+        <!-- Marker-based AR container -->
+        <a-marker id="ar-marker" preset='hiro'>
+            <a-entity id="ar-model-marker"></a-entity>
+        </a-marker>
+    </a-scene>
+</div>
+
+<!-- Back Button for AR mode -->
+<button id="go-back-button" class="go-back-button hidden">Go Back</button>
+
+<!-- AR Instructions Overlay -->
+<div id="ar-overlay">
+    <h2 class="text-2xl font-bold mb-4">AR Mode Activated</h2>
+    <p class="text-lg" id="ar-overlay-text">Please grant camera permissions to continue.</p>
+    <div class="ar-instructions">
+        <p>You can either:</p>
+        <ol class="list-decimal list-inside mt-2">
+            <li>Point your camera at the AR marker to see the monument.</li>
+            <li>Tap on the screen to place the monument anywhere in your environment.</li>
+        </ol>
+    </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.0/aframe/build/ar-aframe.js"></script>
+<script>
+    // --- Global Error Handler for better debugging ---
+    window.onerror = function (message, source, lineno, colno, error) {
+        console.error("Global Script Error Caught:");
+        console.error("Message:", message);
+        console.error("Source:", source);
+        console.error("Line:", lineno, "Column:", colno);
+        if (error) {
+            console.error("Error object:", error);
+        }
+    };
+    
+    // --- Data Model for the Monuments ---
+    const monumentData = {
+        qutubMinar: {
+            en: {
+                name: "Qutub Minar",
+                image: "https://placehold.co/800x600/b0c4de/ffffff?text=Qutub+Minar",
+                history: `The Qutub Minar, located in Delhi, is a 73-meter tall minaret made of red sandstone and marble. Its construction was started in 1192 by Qutub-ud-din Aibak and was completed by his successor, Iltutmish. It is a UNESCO World Heritage Site and is a significant example of Indo-Islamic architecture. The complex also contains the ruins of ancient temples and the famous un-rusted iron pillar.`,
+                funFacts: [
+                    "It is the tallest brick minaret in the world.",
+                    "The minaret has five distinct stories.",
+                    "An iron pillar in the complex has not rusted for over 1600 years."
+                ],
+                quiz: [
+                    {
+                        question: "Who started the construction of Qutub Minar?",
+                        options: ["Iltutmish", "Qutub-ud-din Aibak", "Firoz Shah Tughlaq"],
+                        answer: "Qutub-ud-din Aibak"
+                    },
+                    {
+                        question: "How many distinct stories does the minaret have?",
+                        options: ["3", "5", "7"],
+                        answer: "5"
+                    },
+                    {
+                        question: "What material is the famous un-rusted pillar made of?",
+                        options: ["Bronze", "Copper", "Iron"],
+                        answer: "Iron"
+                    }
+                ]
+            },
+            hi: {
+                name: "कुतुब मीनार",
+                image: "https://placehold.co/800x600/b0c4de/ffffff?text=Qutub+Minar",
+                history: `दिल्ली में स्थित कुतुब मीनार, लाल बलुआ पत्थर और संगमरमर से बनी 73 मीटर ऊंची मीनार है। इसका निर्माण 1192 में कुतुब-उद-दीन ऐबक ने शुरू करवाया था और उनके उत्तराधिकारी इल्तुतमिश ने इसे पूरा किया था। यह एक यूनेस्को विश्व धरोहर स्थल और भारत-इस्‍लामी वास्तुकला का एक महत्वपूर्ण उदाहरण है। परिसर में प्राचीन मंदिरों के खंडहर और प्रसिद्ध जंग रहित लोहे का स्तंभ भी मौजूद है।`,
+                funFacts: [
+                    "यह दुनिया की सबसे ऊंची ईंट की मीनार है।",
+                    "मीनार में पांच अलग-अलग मंजिलें हैं।",
+                    "परिसर में एक लोहे का स्तंभ 1600 से अधिक वर्षों से जंग नहीं लगा है।"
+                ],
+                quiz: [
+                    {
+                        question: "कुतुब मीनार का निर्माण किसने शुरू करवाया था?",
+                        options: ["इल्तुतमिश", "कुतुब-उद-दीन ऐबक", "फिरोज शाह तुगलक"],
+                        answer: "कुतुब-उद-दीन ऐबक"
+                    },
+                    {
+                        question: "मीनार में कितनी अलग-अलग मंजिलें हैं?",
+                        options: ["3", "5", "7"],
+                        answer: "5"
+                    },
+                    {
+                        question: "प्रसिद्ध जंग रहित स्तंभ किस धातु से बना है?",
+                        options: ["कांस्य", "तांबा", "लोहा"],
+                        answer: "लोहा"
+                    }
+                ]
+            },
+            or: {
+                name: "କୁତୁବ୍ ମୀନାର",
+                image: "https://placehold.co/800x600/b0c4de/ffffff?text=Qutub+Minar",
+                history: `ଦିଲ୍ଲୀରେ ଅବସ୍ଥିତ କୁତୁବ୍ ମୀନାର, 73 ମିଟର ଉଚ୍ଚ ଏକ ଲାଲ୍ ବାଲିପଥର ଏବଂ ମାର୍ବଲରେ ନିର୍ମିତ ମୀନାର ଅଟେ। ଏହାର ନିର୍ମାଣ 1192 ରେ କୁତୁବ୍-ଉଦ୍-ଦିନ୍ ଆଇବକ୍ ଦ୍ୱାରା ଆରମ୍ଭ କରାଯାଇଥିଲା ଏବଂ ତାଙ୍କ ଉତ୍ତରାଧିକାରୀ ଇଲ୍ତୁତ୍ମିଶ୍ ଏହାକୁ ସମ୍ପୂର୍ଣ୍ଣ କରିଥିଲେ। ଏହା ଏକ ୟୁନେସ୍କୋ ବିଶ୍ୱ ଐତିହ୍ୟ ସ୍ଥଳ ଏବଂ ଭାରତ-ଇସଲାମୀୟ ସ୍ଥାପତ୍ୟର ଏକ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ଉଦାହରଣ ଅଟେ। ଏହି ସ୍ଥଳରେ ପ୍ରାଚୀନ ମନ୍ଦିରର ଧ୍ୱଂସାବଶେଷ ଏବଂ ପ୍ରସିଦ୍ଧ ଜଙ୍ଗ ନ ଧରିଥିବା ଲୁହା ସ୍ତମ୍ଭ ମଧ୍ୟ ରହିଛି।`,
+                funFacts: [
+                    "ଏହା ଦୁନିଆର ସବୁଠାରୁ ଉଚ୍ଚ ଇଟା ମୀନାର ଅଟେ।",
+                    "ମୀନାରରେ ପାଞ୍ଚଟି ଭିନ୍ନ ମହଲା ଅଛି।",
+                    "ସ୍ଥଳରେ ଥିବା ଏକ ଲୁହା ସ୍ତମ୍ଭକୁ 1600 ବର୍ଷରୁ ଅଧିକ ସମୟ ହେବ ଜଙ୍ଗ ଲାଗିନାହିଁ।"
+                ],
+                quiz: [
+                    {
+                        question: "କୁତୁବ୍ ମୀନାରର ନିର୍ମାଣ କିଏ ଆରମ୍ଭ କରିଥିଲେ?",
+                        options: ["ଇଲ୍ତୁତ୍ମିଶ୍", "କୁତୁବ୍-ଉଦ୍-ଦିନ୍ ଆଇବକ୍", "ଫିରୋଜ୍ ଶାହ ତୁଗଲକ୍"],
+                        answer: "କୁତୁବ୍-ଉଦ୍-ଦିନ୍ ଆଇବକ୍"
+                    },
+                    {
+                        question: "ମୀନାରରେ କେତେଟି ଭିନ୍ନ ମହଲା ଅଛି?",
+                        options: ["3", "5", "7"],
+                        answer: "5"
+                    },
+                    {
+                        question: "ପ୍ରସିଦ୍ଧ ଜଙ୍ଗ ନ ଧରିଥିବା ସ୍ତମ୍ଭ କେଉଁ ଧାତୁରେ ନିର୍ମିତ?",
+                        options: ["କାଂସ୍ୟ", "ତମ୍ବା", "ଲୁହା"],
+                        answer: "ଲୁହା"
+                    }
+                ]
+            }
+        }
+    };
+
+    // --- DOM Elements & State ---
+    const monumentSelect = document.getElementById('monument-select');
+    const languageSelect = document.getElementById('language-select');
+    const ttsButton = document.getElementById('tts-button');
+    const ttsLabel = document.getElementById('tts-label');
+    const monumentTitle = document.getElementById('monument-title');
+    const monumentImage = document.getElementById('monument-image');
+    const monumentHistory = document.getElementById('monument-history');
+    const funFactsList = document.getElementById('fun-facts');
+    const quizQuestionEl = document.getElementById('quiz-question');
+    const quizOptionsEl = document.getElementById('quiz-options');
+    const quizResultEl = document.getElementById('quiz-result');
+    const mainContent = document.getElementById('main-content');
+    const arButton = document.getElementById('ar-button');
+    const goBackButton = document.getElementById('go-back-button');
+    const arContainer = document.getElementById('ar-container');
+    const arModelMarker = document.getElementById('ar-model-marker');
+    const arOverlay = document.getElementById('ar-overlay');
+    const arOverlayText = document.getElementById('ar-overlay-text');
+    let dynamicMarkerlessModel = null;
+    const sceneEl = document.querySelector('a-scene');
+
+    let currentMonument = 'qutubMinar';
+    let currentLanguage = 'en';
+    let currentQuizIndex = 0;
+    const synth = window.speechSynthesis;
+
+    // --- Functions to Update UI and Logic ---
+    function updateUI() {
+        try {
+            const data = monumentData[currentMonument][currentLanguage];
+            if (!data) {
+                console.error("Language or monument data not found. Falling back to English.");
+                const englishData = monumentData[currentMonument]['en'];
+                monumentTitle.textContent = englishData.name;
+                monumentImage.src = englishData.image;
+                monumentHistory.textContent = englishData.history;
+                funFactsList.innerHTML = '';
+                englishData.funFacts.forEach(fact => {
+                    const li = document.createElement('li');
+                    li.textContent = fact;
+                    funFactsList.appendChild(li);
+                });
+            } else {
+                monumentTitle.textContent = data.name;
+                monumentImage.src = data.image;
+                monumentHistory.textContent = data.history;
+
+                // Fun facts
+                funFactsList.innerHTML = '';
+                data.funFacts.forEach(fact => {
+                    const li = document.createElement('li');
+                    li.textContent = fact;
+                    funFactsList.appendChild(li);
+                });
+            }
+            
+            // Quiz
+            currentQuizIndex = 0;
+            loadQuizQuestion();
+            quizResultEl.textContent = '';
+            updateARModels();
+        } catch (error) {
+            console.error("Error in updateUI:", error);
+        }
+    }
+
+    function loadQuizQuestion() {
+        try {
+            const data = monumentData[currentMonument][currentLanguage].quiz;
+            const quizItem = data[currentQuizIndex];
+            quizQuestionEl.textContent = quizItem.question;
+
+            quizOptionsEl.innerHTML = '';
+            quizItem.options.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'quiz-option text-left';
+                button.textContent = option;
+                button.onclick = () => checkAnswer(option, quizItem.answer, button);
+                quizOptionsEl.appendChild(button);
+            });
+        } catch (error) {
+            console.error("Error in loadQuizQuestion:", error);
+        }
+    }
+
+    function checkAnswer(selected, correct, button) {
+        try {
+            if (selected === correct) {
+                button.classList.add('correct');
+                quizResultEl.textContent = 'Correct!';
+                quizResultEl.classList.add('text-green-700');
+            } else {
+                button.classList.add('incorrect');
+                quizResultEl.textContent = 'Incorrect. The correct answer is: ' + correct;
+                quizResultEl.classList.add('text-red-700');
+            }
+            // Disable all options after selection
+            Array.from(quizOptionsEl.children).forEach(opt => opt.disabled = true);
+            
+            // Advance to next question or show completion message
+            setTimeout(() => {
+                currentQuizIndex++;
+                const totalQuestions = monumentData[currentMonument][currentLanguage].quiz.length;
+                if (currentQuizIndex < totalQuestions) {
+                    loadQuizQuestion();
+                    quizResultEl.textContent = '';
+                    Array.from(quizOptionsEl.children).forEach(opt => opt.disabled = false);
+                } else {
+                    quizResultEl.textContent = 'Quiz Complete! You answered ' + (quizOptionsEl.querySelectorAll('.correct').length) + ' out of ' + totalQuestions + ' correctly.';
+                    quizResultEl.classList.remove('text-green-700', 'text-red-700');
+                    quizResultEl.classList.add('text-gray-700');
+                    quizQuestionEl.textContent = 'You have completed the quiz. Great job!';
+                    quizOptionsEl.innerHTML = '';
+                }
+            }, 2000);
+        } catch (error) {
+            console.error("Error in checkAnswer:", error);
+        }
+    }
+
+    function toggleTTS() {
+        try {
+            if (synth.speaking) {
+                synth.cancel();
+                ttsLabel.textContent = "Play Audio";
+            } else {
+                const data = monumentData[currentMonument][currentLanguage];
+                const textToSpeak = data.history + " " + data.funFacts.join(". ");
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = currentLanguage;
+                utterance.onend = () => {
+                    ttsLabel.textContent = "Play Audio";
+                };
+                synth.speak(utterance);
+                ttsLabel.textContent = "Stop Audio";
+            }
+        } catch (error) {
+            console.error("Error in toggleTTS:", error);
+        }
+    }
+
+    // --- AR Functions ---
+    function updateARModels() {
+        try {
+            // Clear any existing marker-based models
+            arModelMarker.innerHTML = '';
+
+            let modelAttributes = {};
+            if (currentMonument === 'qutubMinar') {
+                modelAttributes = {
+                    geometry: "primitive: cylinder; height: 2; radius: 0.5",
+                    material: "color: #8B4513",
+                    position: "0 1 0",
+                    scale: "0.5 0.5 0.5"
+                };
+            } else if (currentMonument === 'konarkTemple') {
+                modelAttributes = {
+                    geometry: "primitive: plane; width: 2; height: 2",
+                    material: "src: https://placehold.co/512x512/000000/FFFFFF.png?text=Konark+Temple",
+                    rotation: "-90 0 0",
+                    position: "0 0 0",
+                    scale: "0.5 0.5 0.5"
+                };
+            }
+            
+            // Apply attributes to the marker-based model
+            const markerModel = document.createElement('a-entity');
+            for (const attr in modelAttributes) {
+                markerModel.setAttribute(attr, modelAttributes[attr]);
+            }
+            markerModel.setAttribute('look-at', 'a-camera');
+            arModelMarker.appendChild(markerModel);
+
+            // Reset the markerless model
+            if (dynamicMarkerlessModel) {
+                dynamicMarkerlessModel.setAttribute('visible', 'false');
+            }
+        } catch (error) {
+            console.error("Error in updateARModels:", error);
+        }
+    }
+
+    function toggleARView() {
+        try {
+            const isAR = mainContent.classList.contains('hidden');
+            if (isAR) {
+                mainContent.classList.remove('hidden');
+                arContainer.classList.add('hidden');
+                goBackButton.classList.add('hidden');
+                document.body.classList.remove('p-0');
+            } else {
+                mainContent.classList.add('hidden');
+                arContainer.classList.remove('hidden');
+                goBackButton.classList.remove('hidden');
+                document.body.classList.add('p-0');
+            }
+        } catch (error) {
+            console.error("Error in toggleARView:", error);
+        }
+    }
+
+    // --- Event Listeners ---
+    monumentSelect.addEventListener('change', (e) => {
+        try {
+            currentMonument = e.target.value;
+            updateUI();
+        } catch (error) {
+            console.error("Error in monumentSelect event listener:", error);
+        }
+    });
+
+    languageSelect.addEventListener('change', (e) => {
+        try {
+            currentLanguage = e.target.value;
+            updateUI();
+        } catch (error) {
+            console.error("Error in languageSelect event listener:", error);
+        }
+    });
+
+    ttsButton.addEventListener('click', () => {
+        try {
+            toggleTTS();
+        } catch (error) {
+            console.error("Error in ttsButton event listener:", error);
+        }
+    });
+
+    arButton.addEventListener('click', async () => {
+        try {
+            arOverlay.classList.add('visible');
+            arOverlayText.textContent = 'Requesting camera permissions...';
+
+            await navigator.mediaDevices.getUserMedia({ video: true });
+            
+            // If we get here, permission was granted
+            toggleARView();
+        } catch (error) {
+            console.error("Error getting camera permissions:", error);
+            if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+                arOverlayText.innerHTML = 'Camera access was denied. <br> Please check your browser\'s site settings to allow camera permissions manually.';
+                setTimeout(() => {
+                    arOverlay.classList.remove('visible');
+                }, 5000);
+            } else {
+                arOverlayText.textContent = 'An error occurred. Please try again or check your device settings.';
+            }
+        }
+    });
+
+    goBackButton.addEventListener('click', () => {
+        try {
+            toggleARView();
+        } catch (error) {
+            console.error("Error in goBackButton event listener:", error);
+        }
+    });
+
+    // Hide overlay once AR scene is ready
+    if (sceneEl) {
+      sceneEl.addEventListener('loaded', () => {
+          try {
+              arOverlay.classList.remove('visible');
+          } catch (error) {
+              console.error("Error in sceneEl 'loaded' event listener:", error);
+          }
+      });
+    }
+
+    // Handle markerless placement on click
+    if (sceneEl) {
+      sceneEl.addEventListener('click', function(event) {
+          try {
+              if (!arContainer.classList.contains('hidden') && event.detail.intersection) {
+                  let modelAttributes = {};
+                  if (currentMonument === 'qutubMinar') {
+                      modelAttributes = {
+                          geometry: "primitive: cylinder; height: 2; radius: 0.5",
+                          material: "color: #8B4513",
+                          position: "0 1 0",
+                          scale: "0.5 0.5 0.5"
+                      };
+                  } else if (currentMonument === 'konarkTemple') {
+                      modelAttributes = {
+                          geometry: "primitive: plane; width: 2; height: 2",
+                          material: "src: https://placehold.co/512x512/000000/FFFFFF.png?text=Konark+Temple",
+                          rotation: "-90 0 0",
+                          position: "0 0 0",
+                          scale: "0.5 0.5 0.5"
+                      };
+                  }
+                  
+                  if (!dynamicMarkerlessModel) {
+                      // Create the model if it doesn't exist
+                      dynamicMarkerlessModel = document.createElement('a-entity');
+                      sceneEl.appendChild(dynamicMarkerlessModel);
+                  }
+                  
+                  // Set attributes and position
+                  for (const attr in modelAttributes) {
+                      dynamicMarkerlessModel.setAttribute(attr, modelAttributes[attr]);
+                  }
+                  dynamicMarkerlessModel.setAttribute('position', event.detail.intersection.point);
+                  dynamicMarkerlessModel.setAttribute('look-at', 'a-camera');
+                  dynamicMarkerlessModel.setAttribute('visible', 'true');
+              }
+          } catch (error) {
+              console.error("Error in sceneEl 'click' event listener:", error);
+          }
+      });
+    }
+
+    // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        updateUI();
+    });
+</script>
+
+</body>
+</html>
